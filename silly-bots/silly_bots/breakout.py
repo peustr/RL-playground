@@ -1,11 +1,12 @@
 import time
 
 import gym
+import numpy as np
 import torch
 import torchvision.transforms as tr
 import torchvision.transforms.functional as trf
 
-from agents.breakout import BreakoutBot, BreakoutHuman
+from silly_bots.agents.breakout import BreakoutBot, BreakoutQBot, BreakoutHuman
 
 
 def state_preprocess(state):
@@ -80,7 +81,58 @@ def human_test_run():
         print('Episode:', episode, 'Total reward:', total_reward)
 
 
+def track_active_bytes():
+    env_name = 'Breakout-ram-v0'
+    num_episodes = 1
+    env = gym.make(env_name)
+    agent = BreakoutBot()
+    freq = [0] * 128
+    for episode in range(num_episodes):
+        state = env.reset()
+        done = False
+        while not done:
+            env.render()
+            action = agent.act(state)
+            next_state, reward, done, info = env.step(action)
+            time.sleep(0.05)
+            active_bytes = np.where(state != next_state)[0].tolist()
+            for b_idx in active_bytes:
+                freq[b_idx] += 1
+            state = next_state
+    print('F:', freq)
+    # [70, 72, 90, 95, 99, 100, 101, 102]
+    print('R:', np.argsort(freq).tolist())
+
+
+def train_small_dqn():
+    env_name = 'Breakout-ram-v0'
+    num_episodes = 10
+    env = gym.make(env_name)
+    agent = BreakoutQBot()
+    byte_idx = [70, 72, 90, 95, 99, 100, 101, 102]
+    total_reward = 0
+    for episode in range(num_episodes):
+        state = env.reset()[byte_idx]
+        done = False
+        while not done:
+            # env.render()
+            action = agent.act(state)
+            next_state, reward, done, info = env.step(action)
+            if done:
+                next_state = None
+            else:
+                next_state = next_state[byte_idx]
+            # time.sleep(0.05)
+            agent.remember(state, action, reward, next_state)
+            state = next_state
+        agent.train()
+        agent.reset_memory()
+        print('Episode:', episode, 'Total reward:', total_reward)
+
+
 if __name__ == '__main__':
-    bot_extract_frames()
+    # bot_extract_frames()
     # bot_test_run()
     # human_test_run()
+    # track_active_bytes()
+    train_small_dqn()
