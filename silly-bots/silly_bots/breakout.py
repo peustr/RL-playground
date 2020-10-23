@@ -50,8 +50,8 @@ def bot_test_run():
     num_episodes = 10
     env = gym.make(env_name)
     agent = BreakoutBot()
-    total_reward = 0
     for episode in range(num_episodes):
+        total_reward = 0
         state = env.reset()
         done = False
         while not done:
@@ -68,8 +68,8 @@ def human_test_run():
     num_episodes = 3
     env = gym.make(env_name)
     agent = BreakoutHuman()
-    total_reward = 0
     for episode in range(num_episodes):
+        total_reward = 0
         state = env.reset()
         done = False
         while not done:
@@ -86,7 +86,7 @@ def track_active_bytes():
     num_episodes = 1
     env = gym.make(env_name)
     agent = BreakoutBot()
-    freq = [0] * 128
+    byte_freq = [0] * 128
     for episode in range(num_episodes):
         state = env.reset()
         done = False
@@ -97,31 +97,35 @@ def track_active_bytes():
             time.sleep(0.05)
             active_bytes = np.where(state != next_state)[0].tolist()
             for b_idx in active_bytes:
-                freq[b_idx] += 1
+                byte_freq[b_idx] += 1
             state = next_state
-    print('F:', freq)
+    print('F:', byte_freq)
     # [70, 72, 90, 95, 99, 100, 101, 102]
-    print('R:', np.argsort(freq).tolist())
+    print('R:', np.argsort(byte_freq).tolist())
 
 
 def train_small_dqn():
     env_name = 'Breakout-ram-v0'
-    num_episodes = 10
+    num_episodes = 5000
     env = gym.make(env_name)
     agent = BreakoutQBot()
     byte_idx = [70, 72, 90, 95, 99, 100, 101, 102]
-    total_reward = 0
     for episode in range(num_episodes):
-        state = torch.from_numpy(env.reset()[byte_idx]).float() / 255
+        total_reward = 0
+        state = torch.from_numpy(env.reset()[byte_idx]).float() / 255.
         done = False
         while not done:
-            # env.render()
+            env.render()
             action = agent.act(state)
             next_state, reward, done, info = env.step(action)
+            if info['ale.lives'] < 5:
+                reward = -10
+                done = True
             if done:
                 next_state = None
             else:
-                next_state = torch.from_numpy(next_state[byte_idx]).float() / 255
+                next_state = torch.from_numpy(next_state[byte_idx]).float() / 255.
+            total_reward += reward
             # time.sleep(0.05)
             agent.remember(state, action, reward, next_state)
             state = next_state
