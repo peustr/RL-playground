@@ -112,7 +112,7 @@ def train_small_dqn():
     byte_idx = [70, 72, 90, 95, 99, 100, 101, 102]
     total_reward = 0
     for episode in range(num_episodes):
-        state = env.reset()[byte_idx]
+        state = torch.from_numpy(env.reset()[byte_idx]).float() / 255
         done = False
         while not done:
             # env.render()
@@ -121,7 +121,7 @@ def train_small_dqn():
             if done:
                 next_state = None
             else:
-                next_state = next_state[byte_idx]
+                next_state = torch.from_numpy(next_state[byte_idx]).float() / 255
             # time.sleep(0.05)
             agent.remember(state, action, reward, next_state)
             state = next_state
